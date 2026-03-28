@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+backend/venv/
+backend/__pycache__/
+
+# Environment
+.env
+backend/.env
+
+# Database
+*.db
+
+# Build
+frontend/build/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+frontend/node_modules/.cache/
