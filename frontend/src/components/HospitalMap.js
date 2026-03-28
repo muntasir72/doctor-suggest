@@ -3,20 +3,18 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const CITY_COORDS = {
-  "new york": [40.7128, -74.006],
-  "los angeles": [34.0522, -118.2437],
-  "chicago": [41.8781, -87.6298],
-  "houston": [29.7604, -95.3698],
-  "san francisco": [37.7749, -122.4194],
-  "boston": [42.3601, -71.0589],
-  "seattle": [47.6062, -122.3321],
-  "miami": [25.7617, -80.1918],
   "srinagar": [34.0837, 74.7973],
-  "delhi": [28.6139, 77.209],
-  "mumbai": [19.076, 72.8777],
+  "anantnag": [33.7311, 75.1487],
+  "baramulla": [34.1980, 74.3436],
+  "sopore": [34.3000, 74.4700],
+  "pulwama": [33.8748, 74.8952],
+  "kupwara": [34.5310, 74.2540],
+  "budgam": [33.8900, 74.7200],
+  "ganderbal": [34.2268, 74.7826],
+  "pahalgam": [34.0161, 75.3150],
 };
 
-const DEFAULT_CENTER = [40.7128, -74.006];
+const DEFAULT_CENTER = [34.0837, 74.7973];
 
 function getCityFallback(cityName, index) {
   const base = CITY_COORDS[(cityName || "").toLowerCase()] || DEFAULT_CENTER;

@@ -828,8 +828,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1.5rem;
+  text-align: center;
 }
 
 .footer-logo {
@@ -855,21 +856,38 @@
   color: var(--foreground);
 }
 
-.footer-links {
+.footer-contact {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
-  font-size: 0.85rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.footer-links a {
+.footer-contact-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--foreground);
+}
+
+.footer-contact-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.footer-contact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   color: var(--muted-foreground);
   text-decoration: none;
+  font-size: 0.85rem;
   transition: color 0.2s;
 }
 
-.footer-links a:hover {
-  color: var(--foreground);
+.footer-contact-item:hover {
+  color: var(--primary);
 }
 
 .footer-copy {
