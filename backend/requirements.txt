@@ -4,3 +4,5 @@ openai>=1.60.0
 exa-py>=1.9.0
 python-dotenv>=1.0.0
 sqlalchemy>=2.0.0
+bcrypt
+python-jose[cryptography]

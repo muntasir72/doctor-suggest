@@ -9,6 +9,8 @@ const INITIAL = {
   city: "",
   contact_number: "",
   email: "",
+  password: "",
+  confirm_password: "",
   description: "",
   latitude: null,
   longitude: null,
@@ -64,7 +66,9 @@ export default function RegisterHospital() {
     form.address.trim() &&
     form.city.trim() &&
     form.contact_number.trim() &&
-    form.email.trim();
+    form.email.trim() &&
+    form.password.length >= 6 &&
+    form.password === form.confirm_password;
 
   const doctorsValid = doctors.every(
     (d) => d.name.trim() && d.specialty && d.experience_years !== ""
@@ -86,8 +90,9 @@ export default function RegisterHospital() {
     setLocationError(null);
 
     try {
+      const { confirm_password, ...formData } = form;
       const payload = {
-        ...form,
+        ...formData,
         doctors: doctors.map((d) => ({
           ...d,
           experience_years: parseInt(d.experience_years, 10) || 0,
@@ -159,6 +164,20 @@ export default function RegisterHospital() {
             <div className="form-group">
               <label className="form-label" htmlFor="h-email">Email <span className="required">*</span></label>
               <input id="h-email" className="form-input" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="hospital@example.com" disabled={loading} />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label" htmlFor="h-pass">Password <span className="required">*</span></label>
+              <input id="h-pass" className="form-input" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="Min 6 characters" disabled={loading} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="h-pass2">Confirm Password <span className="required">*</span></label>
+              <input id="h-pass2" className="form-input" type="password" value={form.confirm_password} onChange={(e) => update("confirm_password", e.target.value)} placeholder="Re-enter password" disabled={loading} />
+              {form.confirm_password && form.password !== form.confirm_password && (
+                <span style={{ color: "var(--destructive)", fontSize: "0.8rem", marginTop: "0.25rem", display: "block" }}>Passwords do not match</span>
+              )}
             </div>
           </div>
 

@@ -1794,3 +1794,152 @@
     height: 280px;
   }
 }
+
+/* ── Login ── */
+
+.login-role-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  background: var(--muted);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.role-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.role-btn.active {
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.role-btn:hover:not(.active) {
+  color: var(--foreground);
+}
+
+.login-register-hint {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  margin-top: 1rem;
+}
+
+.login-register-hint a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-register-hint a:hover {
+  text-decoration: underline;
+}
+
+/* ── Dashboard ── */
+
+.dash-hospital-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--muted);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  margin-bottom: 1rem;
+}
+
+.dash-doctor-card {
+  background: var(--muted);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  transition: box-shadow 0.2s;
+}
+
+.dash-doctor-card:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.dash-doctor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dash-doctor-info strong {
+  font-size: 1rem;
+  color: var(--foreground);
+}
+
+.dash-doctor-specialty {
+  font-size: 0.85rem;
+  color: var(--primary);
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.dash-doctor-meta {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+.dash-doctor-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--destructive);
+  border: 1px solid var(--destructive);
+  padding: 0.35rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover {
+  background: var(--destructive);
+  color: white;
+}
+
+.alert-success {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}

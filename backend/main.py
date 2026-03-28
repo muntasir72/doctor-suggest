@@ -2,20 +2,23 @@ import os
 import json
 from typing import Optional
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 from exa_py import Exa
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+import bcrypt
+from jose import jwt, JWTError
 
 from database import get_db, init_db
 from models import Hospital, Doctor
 from schemas import (
-    HospitalCreate, HospitalResponse,
-    DoctorCreate, DoctorResponse,
+    HospitalCreate, HospitalResponse, HospitalUpdate,
+    DoctorCreate, DoctorResponse, DoctorUpdate,
     DoctorEntry,
+    LoginRequest, LoginResponse,
     VALID_SPECIALTIES,
 )
 
@@ -38,6 +41,65 @@ openai_client = AsyncOpenAI(
 exa_client = Exa(api_key=os.getenv("EXA_API_KEY"))
 
 
+# ── Auth Utilities ──
+
+JWT_SECRET = os.getenv("JWT_SECRET", "medimatch-dev-secret-change-in-production")
+JWT_ALGORITHM = "HS256"
+
+
+def hash_password(plain: str) -> str:
+    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+
+
+def create_token(data: dict) -> str:
+    to_encode = {**data, "sub": str(data["sub"])}
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _extract_token(authorization: Optional[str] = Header(None)) -> dict:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated.")
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload["sub"] = int(payload["sub"])
+    except (JWTError, Exception):
+        raise HTTPException(status_code=401, detail="Invalid or expired token.")
+    return payload
+
+
+def get_current_hospital(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> Hospital:
+    payload = _extract_token(authorization)
+    if payload.get("role") != "hospital":
+        raise HTTPException(status_code=403, detail="Hospital access required.")
+    hospital = db.query(Hospital).filter(Hospital.id == payload["sub"]).first()
+    if not hospital:
+        raise HTTPException(status_code=404, detail="Hospital not found.")
+    return hospital
+
+
+def get_current_doctor(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+) -> Doctor:
+    payload = _extract_token(authorization)
+    if payload.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="Doctor access required.")
+    doctor = db.query(Doctor).filter(Doctor.id == payload["sub"]).first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found.")
+    return doctor
+
+
+# ── Startup ──
+
 @app.on_event("startup")
 def on_startup():
     init_db()
@@ -51,15 +113,17 @@ def seed_default_data():
         if db.query(Hospital).count() > 0:
             return
 
+        default_hash = hash_password("password123")
+
         hospitals = [
-            Hospital(name="City Heart Hospital", address="123 Main St, Manhattan", city="New York", contact_number="+1-555-0100", email="info@cityheart.com", description="Leading cardiac care center", latitude=40.7580, longitude=-73.9855),
-            Hospital(name="NeuroLife Clinic", address="456 Oak Ave, Brooklyn", city="New York", contact_number="+1-555-0200", email="info@neurolife.com", description="Advanced neurological treatments", latitude=40.6892, longitude=-73.9857),
-            Hospital(name="SkinCare Advanced Center", address="789 Pine Rd, Beverly Hills", city="Los Angeles", contact_number="+1-555-0300", email="info@skincare.com", description="Comprehensive dermatology services", latitude=34.0736, longitude=-118.4004),
-            Hospital(name="City General Hospital", address="321 Elm St, Midtown", city="New York", contact_number="+1-555-0400", email="info@citygeneral.com", description="Multi-specialty hospital", latitude=40.7488, longitude=-73.9856),
-            Hospital(name="Wellness Medical Center", address="654 Maple Dr, Lincoln Park", city="Chicago", contact_number="+1-555-0500", email="info@wellness.com", description="Full-service medical center", latitude=41.9214, longitude=-87.6513),
-            Hospital(name="Community Health Clinic", address="987 Cedar Ln, Hyde Park", city="Chicago", contact_number="+1-555-0600", email="info@communityhealth.com", description="Affordable community healthcare", latitude=41.7943, longitude=-87.5907),
-            Hospital(name="BoneJoint Specialty Hospital", address="147 Birch Blvd, Santa Monica", city="Los Angeles", contact_number="+1-555-0700", email="info@bonejoint.com", description="Orthopedic excellence", latitude=34.0195, longitude=-118.4912),
-            Hospital(name="Digestive Health Institute", address="258 Spruce St, Upper East Side", city="New York", contact_number="+1-555-0800", email="info@digestive.com", description="GI and digestive care", latitude=40.7736, longitude=-73.9566),
+            Hospital(name="City Heart Hospital", address="123 Main St, Manhattan", city="New York", contact_number="+1-555-0100", email="info@cityheart.com", password_hash=default_hash, description="Leading cardiac care center", latitude=40.7580, longitude=-73.9855),
+            Hospital(name="NeuroLife Clinic", address="456 Oak Ave, Brooklyn", city="New York", contact_number="+1-555-0200", email="info@neurolife.com", password_hash=default_hash, description="Advanced neurological treatments", latitude=40.6892, longitude=-73.9857),
+            Hospital(name="SkinCare Advanced Center", address="789 Pine Rd, Beverly Hills", city="Los Angeles", contact_number="+1-555-0300", email="info@skincare.com", password_hash=default_hash, description="Comprehensive dermatology services", latitude=34.0736, longitude=-118.4004),
+            Hospital(name="City General Hospital", address="321 Elm St, Midtown", city="New York", contact_number="+1-555-0400", email="info@citygeneral.com", password_hash=default_hash, description="Multi-specialty hospital", latitude=40.7488, longitude=-73.9856),
+            Hospital(name="Wellness Medical Center", address="654 Maple Dr, Lincoln Park", city="Chicago", contact_number="+1-555-0500", email="info@wellness.com", password_hash=default_hash, description="Full-service medical center", latitude=41.9214, longitude=-87.6513),
+            Hospital(name="Community Health Clinic", address="987 Cedar Ln, Hyde Park", city="Chicago", contact_number="+1-555-0600", email="info@communityhealth.com", password_hash=default_hash, description="Affordable community healthcare", latitude=41.7943, longitude=-87.5907),
+            Hospital(name="BoneJoint Specialty Hospital", address="147 Birch Blvd, Santa Monica", city="Los Angeles", contact_number="+1-555-0700", email="info@bonejoint.com", password_hash=default_hash, description="Orthopedic excellence", latitude=34.0195, longitude=-118.4912),
+            Hospital(name="Digestive Health Institute", address="258 Spruce St, Upper East Side", city="New York", contact_number="+1-555-0800", email="info@digestive.com", password_hash=default_hash, description="GI and digestive care", latitude=40.7736, longitude=-73.9566),
         ]
         db.add_all(hospitals)
         db.flush()
@@ -67,18 +131,18 @@ def seed_default_data():
         hospital_map = {h.name: h.id for h in hospitals}
 
         doctors = [
-            Doctor(name="Dr. Sarah Mitchell", specialty="cardiologist", experience_years=15, hospital_id=hospital_map["City Heart Hospital"], availability="Mon-Fri", contact_info="+1-555-0101"),
-            Doctor(name="Dr. James Carter", specialty="cardiologist", experience_years=12, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Sat", contact_info="+1-555-0102"),
-            Doctor(name="Dr. Priya Sharma", specialty="neurologist", experience_years=10, hospital_id=hospital_map["NeuroLife Clinic"], availability="Mon-Fri", contact_info="+1-555-0201"),
-            Doctor(name="Dr. Robert Kim", specialty="neurologist", experience_years=8, hospital_id=hospital_map["City General Hospital"], availability="Tue-Sat", contact_info="+1-555-0202"),
-            Doctor(name="Dr. Emily Chen", specialty="dermatologist", experience_years=9, hospital_id=hospital_map["SkinCare Advanced Center"], availability="Mon-Thu", contact_info="+1-555-0301"),
-            Doctor(name="Dr. Michael Davis", specialty="dermatologist", experience_years=14, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Fri", contact_info="+1-555-0302"),
-            Doctor(name="Dr. Anna Lopez", specialty="general physician", experience_years=20, hospital_id=hospital_map["City General Hospital"], availability="Mon-Sat", contact_info="+1-555-0401"),
-            Doctor(name="Dr. David Brown", specialty="general physician", experience_years=7, hospital_id=hospital_map["Community Health Clinic"], availability="7 days", contact_info="+1-555-0402"),
-            Doctor(name="Dr. Lisa Wang", specialty="orthopedist", experience_years=11, hospital_id=hospital_map["BoneJoint Specialty Hospital"], availability="Mon-Fri", contact_info="+1-555-0501"),
-            Doctor(name="Dr. Thomas Green", specialty="orthopedist", experience_years=16, hospital_id=hospital_map["City General Hospital"], availability="Mon-Thu", contact_info="+1-555-0502"),
-            Doctor(name="Dr. Rachel Foster", specialty="gastroenterologist", experience_years=13, hospital_id=hospital_map["Digestive Health Institute"], availability="Tue-Sat", contact_info="+1-555-0601"),
-            Doctor(name="Dr. Kevin Patel", specialty="gastroenterologist", experience_years=6, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Fri", contact_info="+1-555-0602"),
+            Doctor(name="Dr. Sarah Mitchell", email="sarah.mitchell@cityheart.com", password_hash=default_hash, specialty="cardiologist", experience_years=15, hospital_id=hospital_map["City Heart Hospital"], availability="Mon-Fri", contact_info="+1-555-0101"),
+            Doctor(name="Dr. James Carter", email="james.carter@wellness.com", password_hash=default_hash, specialty="cardiologist", experience_years=12, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Sat", contact_info="+1-555-0102"),
+            Doctor(name="Dr. Priya Sharma", email="priya.sharma@neurolife.com", password_hash=default_hash, specialty="neurologist", experience_years=10, hospital_id=hospital_map["NeuroLife Clinic"], availability="Mon-Fri", contact_info="+1-555-0201"),
+            Doctor(name="Dr. Robert Kim", email="robert.kim@citygeneral.com", password_hash=default_hash, specialty="neurologist", experience_years=8, hospital_id=hospital_map["City General Hospital"], availability="Tue-Sat", contact_info="+1-555-0202"),
+            Doctor(name="Dr. Emily Chen", email="emily.chen@skincare.com", password_hash=default_hash, specialty="dermatologist", experience_years=9, hospital_id=hospital_map["SkinCare Advanced Center"], availability="Mon-Thu", contact_info="+1-555-0301"),
+            Doctor(name="Dr. Michael Davis", email="michael.davis@wellness.com", password_hash=default_hash, specialty="dermatologist", experience_years=14, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Fri", contact_info="+1-555-0302"),
+            Doctor(name="Dr. Anna Lopez", email="anna.lopez@citygeneral.com", password_hash=default_hash, specialty="general physician", experience_years=20, hospital_id=hospital_map["City General Hospital"], availability="Mon-Sat", contact_info="+1-555-0401"),
+            Doctor(name="Dr. David Brown", email="david.brown@communityhealth.com", password_hash=default_hash, specialty="general physician", experience_years=7, hospital_id=hospital_map["Community Health Clinic"], availability="7 days", contact_info="+1-555-0402"),
+            Doctor(name="Dr. Lisa Wang", email="lisa.wang@bonejoint.com", password_hash=default_hash, specialty="orthopedist", experience_years=11, hospital_id=hospital_map["BoneJoint Specialty Hospital"], availability="Mon-Fri", contact_info="+1-555-0501"),
+            Doctor(name="Dr. Thomas Green", email="thomas.green@citygeneral.com", password_hash=default_hash, specialty="orthopedist", experience_years=16, hospital_id=hospital_map["City General Hospital"], availability="Mon-Thu", contact_info="+1-555-0502"),
+            Doctor(name="Dr. Rachel Foster", email="rachel.foster@digestive.com", password_hash=default_hash, specialty="gastroenterologist", experience_years=13, hospital_id=hospital_map["Digestive Health Institute"], availability="Tue-Sat", contact_info="+1-555-0601"),
+            Doctor(name="Dr. Kevin Patel", email="kevin.patel@wellness.com", password_hash=default_hash, specialty="gastroenterologist", experience_years=6, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Fri", contact_info="+1-555-0602"),
         ]
         db.add_all(doctors)
         db.commit()
@@ -271,12 +335,178 @@ async def analyze_symptoms(request: SymptomRequest, db: Session = Depends(get_db
     )
 
 
-# ── Hospital Endpoints ──
+# ── Auth Endpoints ──
+
+@app.post("/auth/login", response_model=LoginResponse)
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    if data.role == "hospital":
+        user = db.query(Hospital).filter(
+            func.lower(Hospital.email) == data.email.strip().lower()
+        ).first()
+        if not user or not verify_password(data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+        token = create_token({"sub": user.id, "role": "hospital"})
+        return LoginResponse(token=token, role="hospital", id=user.id, name=user.name)
+
+    elif data.role == "doctor":
+        user = db.query(Doctor).filter(
+            func.lower(Doctor.email) == data.email.strip().lower(),
+            Doctor.email != "",
+        ).first()
+        if not user or not user.password_hash or not verify_password(data.password, user.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+        token = create_token({"sub": user.id, "role": "doctor"})
+        return LoginResponse(token=token, role="doctor", id=user.id, name=user.name)
+
+    raise HTTPException(status_code=400, detail="Role must be 'hospital' or 'doctor'.")
+
+
+@app.get("/auth/me")
+def get_me(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    payload = _extract_token(authorization)
+    role = payload.get("role")
+    uid = payload.get("sub")
+
+    if role == "hospital":
+        hospital = db.query(Hospital).filter(Hospital.id == uid).first()
+        if not hospital:
+            raise HTTPException(status_code=404, detail="Hospital not found.")
+        return {
+            "role": "hospital",
+            "id": hospital.id,
+            "name": hospital.name,
+            "address": hospital.address,
+            "city": hospital.city,
+            "contact_number": hospital.contact_number,
+            "email": hospital.email,
+            "description": hospital.description,
+            "latitude": hospital.latitude,
+            "longitude": hospital.longitude,
+        }
+
+    elif role == "doctor":
+        doctor = db.query(Doctor).filter(Doctor.id == uid).first()
+        if not doctor:
+            raise HTTPException(status_code=404, detail="Doctor not found.")
+        return {
+            "role": "doctor",
+            "id": doctor.id,
+            "name": doctor.name,
+            "email": doctor.email,
+            "specialty": doctor.specialty,
+            "experience_years": doctor.experience_years,
+            "hospital_id": doctor.hospital_id,
+            "hospital_name": doctor.hospital.name if doctor.hospital else "",
+            "availability": doctor.availability,
+            "contact_info": doctor.contact_info,
+            "address": doctor.address,
+            "city": doctor.city,
+            "latitude": doctor.latitude,
+            "longitude": doctor.longitude,
+        }
+
+    raise HTTPException(status_code=400, detail="Unknown role in token.")
+
+
+# ── Hospital Dashboard Endpoints ──
+
+@app.put("/auth/me/hospital", response_model=HospitalResponse)
+def update_my_hospital(
+    data: HospitalUpdate,
+    hospital: Hospital = Depends(get_current_hospital),
+    db: Session = Depends(get_db),
+):
+    for field, value in data.model_dump(exclude_unset=True).items():
+        if value is not None:
+            setattr(hospital, field, value.strip() if isinstance(value, str) else value)
+    db.commit()
+    db.refresh(hospital)
+    return hospital
+
+
+@app.get("/auth/me/hospital/doctors", response_model=list[DoctorResponse])
+def list_my_doctors(
+    hospital: Hospital = Depends(get_current_hospital),
+    db: Session = Depends(get_db),
+):
+    return db.query(Doctor).filter(Doctor.hospital_id == hospital.id).order_by(Doctor.name).all()
+
+
+@app.put("/auth/me/hospital/doctors/{doctor_id}", response_model=DoctorResponse)
+def update_my_doctor(
+    doctor_id: int,
+    data: DoctorUpdate,
+    hospital: Hospital = Depends(get_current_hospital),
+    db: Session = Depends(get_db),
+):
+    doctor = db.query(Doctor).filter(
+        Doctor.id == doctor_id, Doctor.hospital_id == hospital.id
+    ).first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found in your hospital.")
+
+    updates = data.model_dump(exclude_unset=True)
+    if "specialty" in updates and updates["specialty"]:
+        if updates["specialty"].lower().strip() not in VALID_SPECIALTIES:
+            raise HTTPException(status_code=400, detail=f"Invalid specialty. Must be one of: {', '.join(VALID_SPECIALTIES)}")
+
+    for field, value in updates.items():
+        if value is not None:
+            setattr(doctor, field, value.strip() if isinstance(value, str) else value)
+    db.commit()
+    db.refresh(doctor)
+    return doctor
+
+
+@app.delete("/auth/me/hospital/doctors/{doctor_id}")
+def delete_my_doctor(
+    doctor_id: int,
+    hospital: Hospital = Depends(get_current_hospital),
+    db: Session = Depends(get_db),
+):
+    doctor = db.query(Doctor).filter(
+        Doctor.id == doctor_id, Doctor.hospital_id == hospital.id
+    ).first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="Doctor not found in your hospital.")
+    db.delete(doctor)
+    db.commit()
+    return {"detail": "Doctor removed."}
+
+
+# ── Doctor Dashboard Endpoint ──
+
+@app.put("/auth/me/doctor", response_model=DoctorResponse)
+def update_my_doctor_profile(
+    data: DoctorUpdate,
+    doctor: Doctor = Depends(get_current_doctor),
+    db: Session = Depends(get_db),
+):
+    updates = data.model_dump(exclude_unset=True)
+    if "specialty" in updates and updates["specialty"]:
+        if updates["specialty"].lower().strip() not in VALID_SPECIALTIES:
+            raise HTTPException(status_code=400, detail=f"Invalid specialty. Must be one of: {', '.join(VALID_SPECIALTIES)}")
+
+    for field, value in updates.items():
+        if value is not None:
+            setattr(doctor, field, value.strip() if isinstance(value, str) else value)
+    db.commit()
+    db.refresh(doctor)
+    return doctor
+
+
+# ── Hospital Registration ──
 
 @app.post("/hospitals/register", response_model=HospitalResponse, status_code=201)
 def register_hospital(data: HospitalCreate, db: Session = Depends(get_db)):
     if not data.name.strip() or not data.city.strip() or not data.email.strip():
         raise HTTPException(status_code=400, detail="Name, city, and email are required.")
+
+    if not data.password or len(data.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
 
     duplicate = db.query(Hospital).filter(
         func.lower(Hospital.name) == data.name.strip().lower(),
@@ -284,6 +514,12 @@ def register_hospital(data: HospitalCreate, db: Session = Depends(get_db)):
     ).first()
     if duplicate:
         raise HTTPException(status_code=409, detail="A hospital with this name already exists in this city.")
+
+    email_taken = db.query(Hospital).filter(
+        func.lower(Hospital.email) == data.email.strip().lower()
+    ).first()
+    if email_taken:
+        raise HTTPException(status_code=409, detail="This email is already registered.")
 
     if data.doctors:
         for doc in data.doctors:
@@ -301,6 +537,7 @@ def register_hospital(data: HospitalCreate, db: Session = Depends(get_db)):
         city=data.city.strip(),
         contact_number=data.contact_number.strip(),
         email=data.email.strip(),
+        password_hash=hash_password(data.password),
         description=(data.description or "").strip(),
         latitude=data.latitude,
         longitude=data.longitude,
@@ -341,7 +578,7 @@ def get_hospital(hospital_id: int, db: Session = Depends(get_db)):
     return hospital
 
 
-# ── Doctor Endpoints ──
+# ── Doctor Registration ──
 
 @app.post("/doctors/add", response_model=DoctorResponse, status_code=201)
 def add_doctor(data: DoctorCreate, db: Session = Depends(get_db)):
@@ -358,8 +595,22 @@ def add_doctor(data: DoctorCreate, db: Session = Depends(get_db)):
     if not hospital:
         raise HTTPException(status_code=404, detail="Hospital not found. Register the hospital first.")
 
+    p_hash = ""
+    if data.password and data.email:
+        if len(data.password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+        email_taken = db.query(Doctor).filter(
+            func.lower(Doctor.email) == data.email.strip().lower(),
+            Doctor.email != "",
+        ).first()
+        if email_taken:
+            raise HTTPException(status_code=409, detail="A doctor with this email already exists.")
+        p_hash = hash_password(data.password)
+
     doctor = Doctor(
         name=data.name.strip(),
+        email=(data.email or "").strip(),
+        password_hash=p_hash,
         specialty=data.specialty.lower().strip(),
         experience_years=data.experience_years,
         hospital_id=data.hospital_id,

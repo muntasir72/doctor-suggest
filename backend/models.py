@@ -12,6 +12,7 @@ class Hospital(Base):
     city = Column(String, nullable=False, index=True)
     contact_number = Column(String, nullable=False)
     email = Column(String, nullable=False)
+    password_hash = Column(String, nullable=False)
     description = Column(String, default="")
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
@@ -24,6 +25,8 @@ class Doctor(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    email = Column(String, default="")
+    password_hash = Column(String, default="")
     specialty = Column(String, nullable=False, index=True)
     experience_years = Column(Integer, default=0)
     hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=False)

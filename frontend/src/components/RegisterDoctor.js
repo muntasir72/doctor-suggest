@@ -5,6 +5,9 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 const INITIAL = {
   name: "",
+  email: "",
+  password: "",
+  confirm_password: "",
   specialty: "",
   experience_years: "",
   hospital_id: "",
@@ -50,7 +53,14 @@ export default function RegisterDoctor() {
     }));
   };
 
-  const isValid = form.name.trim() && form.specialty && form.hospital_id && form.experience_years;
+  const isValid =
+    form.name.trim() &&
+    form.email.trim() &&
+    form.password.length >= 6 &&
+    form.password === form.confirm_password &&
+    form.specialty &&
+    form.hospital_id &&
+    form.experience_years;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,8 +72,9 @@ export default function RegisterDoctor() {
     setLocationError(null);
 
     try {
+      const { confirm_password, ...formData } = form;
       const payload = {
-        ...form,
+        ...formData,
         experience_years: parseInt(form.experience_years, 10) || 0,
         hospital_id: parseInt(form.hospital_id, 10),
       };
@@ -112,6 +123,25 @@ export default function RegisterDoctor() {
             <div className="form-group">
               <label className="form-label" htmlFor="d-exp">Experience (years) <span className="required">*</span></label>
               <input id="d-exp" className="form-input" type="number" min="0" max="60" value={form.experience_years} onChange={(e) => update("experience_years", e.target.value)} placeholder="e.g., 10" disabled={loading} />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="d-email">Email <span className="required">*</span></label>
+            <input id="d-email" className="form-input" type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="doctor@example.com" disabled={loading} />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label" htmlFor="d-pass">Password <span className="required">*</span></label>
+              <input id="d-pass" className="form-input" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} placeholder="Min 6 characters" disabled={loading} />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="d-pass2">Confirm Password <span className="required">*</span></label>
+              <input id="d-pass2" className="form-input" type="password" value={form.confirm_password} onChange={(e) => update("confirm_password", e.target.value)} placeholder="Re-enter password" disabled={loading} />
+              {form.confirm_password && form.password !== form.confirm_password && (
+                <span style={{ color: "var(--destructive)", fontSize: "0.8rem", marginTop: "0.25rem", display: "block" }}>Passwords do not match</span>
+              )}
             </div>
           </div>
 

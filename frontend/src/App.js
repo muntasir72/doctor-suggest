@@ -1,10 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router";
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from "react-router";
 import DoctorCard from "./components/DoctorCard";
 import RegisterHospital from "./components/RegisterHospital";
 import RegisterDoctor from "./components/RegisterDoctor";
+import Login from "./components/Login";
+import HospitalDashboard from "./components/HospitalDashboard";
+import DoctorDashboard from "./components/DoctorDashboard";
 import SymptomChat from "./components/SymptomChat";
 import HospitalMap from "./components/HospitalMap";
+import { AuthProvider, useAuth } from "./AuthContext";
 import "./App.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
@@ -12,7 +16,16 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 /* ── Shared Layout ── */
 function Layout({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const isHome = location.pathname === "/";
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  const dashPath = user?.role === "hospital" ? "/dashboard/hospital" : "/dashboard/doctor";
 
   return (
     <div className="app">
@@ -29,10 +42,19 @@ function Layout({ children }) {
           </Link>
           <nav className="header-nav">
             <Link to="/" className={isHome ? "nav-active" : ""}>Find Doctor</Link>
-            <Link to="/register-hospital">Register Hospital</Link>
-            <Link to="/register-doctor">Register Doctor</Link>
             <Link to="/map">Map</Link>
-            <Link to="/" className="nav-cta">Get Started</Link>
+            {user ? (
+              <>
+                <Link to={dashPath} className={location.pathname.startsWith("/dashboard") ? "nav-active" : ""}>Dashboard</Link>
+                <button onClick={handleLogout} className="nav-cta" style={{ cursor: "pointer" }}>Logout</button>
+              </>
+            ) : (
+              <>
+                <Link to="/register-hospital">Register Hospital</Link>
+                <Link to="/register-doctor">Register Doctor</Link>
+                <Link to="/login" className="nav-cta">Login</Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -397,14 +419,19 @@ function MapPage() {
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/register-hospital" element={<RegisterHospital />} />
-          <Route path="/register-doctor" element={<RegisterDoctor />} />
-          <Route path="/map" element={<MapPage />} />
-        </Routes>
-      </Layout>
+      <AuthProvider>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/register-hospital" element={<RegisterHospital />} />
+            <Route path="/register-doctor" element={<RegisterDoctor />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard/hospital" element={<HospitalDashboard />} />
+            <Route path="/dashboard/doctor" element={<DoctorDashboard />} />
+            <Route path="/map" element={<MapPage />} />
+          </Routes>
+        </Layout>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
