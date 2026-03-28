@@ -59,6 +59,10 @@ class DoctorCreate(BaseModel):
     hospital_id: int
     availability: Optional[str] = ""
     contact_info: Optional[str] = ""
+    address: Optional[str] = ""
+    city: Optional[str] = ""
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class DoctorResponse(BaseModel):
@@ -69,6 +73,10 @@ class DoctorResponse(BaseModel):
     hospital_id: int
     availability: str
     contact_info: str
+    address: str = ""
+    city: str = ""
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     hospital: Optional[HospitalResponse] = None
 
     class Config:

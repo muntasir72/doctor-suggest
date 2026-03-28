@@ -29,5 +29,9 @@ class Doctor(Base):
     hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=False)
     availability = Column(String, default="")
     contact_info = Column(String, default="")
+    address = Column(String, default="")
+    city = Column(String, default="")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
 
     hospital = relationship("Hospital", back_populates="doctors")

@@ -365,6 +365,10 @@ def add_doctor(data: DoctorCreate, db: Session = Depends(get_db)):
         hospital_id=data.hospital_id,
         availability=(data.availability or "").strip(),
         contact_info=(data.contact_info or "").strip(),
+        address=(data.address or "").strip(),
+        city=(data.city or "").strip(),
+        latitude=data.latitude,
+        longitude=data.longitude,
     )
     db.add(doctor)
     db.commit()

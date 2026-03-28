@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import LocationPicker from "./LocationPicker";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
@@ -9,6 +10,10 @@ const INITIAL = {
   hospital_id: "",
   availability: "",
   contact_info: "",
+  address: "",
+  city: "",
+  latitude: null,
+  longitude: null,
 };
 
 export default function RegisterDoctor() {
@@ -18,6 +23,7 @@ export default function RegisterDoctor() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
   const [error, setError] = useState(null);
+  const [locationError, setLocationError] = useState(null);
 
   useEffect(() => {
     fetch(`${API_URL}/hospitals`)
@@ -33,6 +39,17 @@ export default function RegisterDoctor() {
 
   const update = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
+  const handleLocationChange = (loc) => {
+    setLocationError(null);
+    setForm((prev) => ({
+      ...prev,
+      address: loc.address || prev.address,
+      city: loc.city || prev.city,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+    }));
+  };
+
   const isValid = form.name.trim() && form.specialty && form.hospital_id && form.experience_years;
 
   const handleSubmit = async (e) => {
@@ -42,6 +59,7 @@ export default function RegisterDoctor() {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setLocationError(null);
 
     try {
       const payload = {
@@ -127,6 +145,18 @@ export default function RegisterDoctor() {
               <label className="form-label" htmlFor="d-contact">Contact Info <span className="optional">(Optional)</span></label>
               <input id="d-contact" className="form-input" value={form.contact_info} onChange={(e) => update("contact_info", e.target.value)} placeholder="+1-555-0100" disabled={loading} />
             </div>
+          </div>
+
+          <LocationPicker
+            value={{ address: form.address, latitude: form.latitude, longitude: form.longitude }}
+            onChange={handleLocationChange}
+            disabled={loading}
+          />
+          {locationError && <div className="alert alert-error" style={{ marginTop: "-0.5rem" }}>{locationError}</div>}
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="d-city">City <span className="optional">(Optional)</span></label>
+            <input id="d-city" className="form-input" value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="Auto-filled from address, or enter manually" disabled={loading} />
           </div>
 
           {hospitals.length === 0 && (
