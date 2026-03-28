@@ -16,6 +16,15 @@ VALID_SPECIALTIES = [
 ]
 
 
+class DoctorEntry(BaseModel):
+    """Doctor data submitted as part of hospital registration (no hospital_id needed)."""
+    name: str
+    specialty: str
+    experience_years: int = 0
+    availability: Optional[str] = ""
+    contact_info: Optional[str] = ""
+
+
 class HospitalCreate(BaseModel):
     name: str
     address: str
@@ -25,6 +34,7 @@ class HospitalCreate(BaseModel):
     description: Optional[str] = ""
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    doctors: Optional[list[DoctorEntry]] = []
 
 
 class HospitalResponse(BaseModel):

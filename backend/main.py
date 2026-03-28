@@ -15,6 +15,7 @@ from models import Hospital, Doctor
 from schemas import (
     HospitalCreate, HospitalResponse,
     DoctorCreate, DoctorResponse,
+    DoctorEntry,
     VALID_SPECIALTIES,
 )
 
@@ -284,6 +285,16 @@ def register_hospital(data: HospitalCreate, db: Session = Depends(get_db)):
     if duplicate:
         raise HTTPException(status_code=409, detail="A hospital with this name already exists in this city.")
 
+    if data.doctors:
+        for doc in data.doctors:
+            if not doc.name.strip() or not doc.specialty.strip():
+                raise HTTPException(status_code=400, detail="Each doctor must have a name and specialty.")
+            if doc.specialty.lower().strip() not in VALID_SPECIALTIES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid specialty '{doc.specialty}' for doctor '{doc.name}'. Must be one of: {', '.join(VALID_SPECIALTIES)}",
+                )
+
     hospital = Hospital(
         name=data.name.strip(),
         address=data.address.strip(),
@@ -295,6 +306,20 @@ def register_hospital(data: HospitalCreate, db: Session = Depends(get_db)):
         longitude=data.longitude,
     )
     db.add(hospital)
+    db.flush()
+
+    if data.doctors:
+        for doc in data.doctors:
+            doctor = Doctor(
+                name=doc.name.strip(),
+                specialty=doc.specialty.lower().strip(),
+                experience_years=doc.experience_years,
+                hospital_id=hospital.id,
+                availability=(doc.availability or "").strip(),
+                contact_info=(doc.contact_info or "").strip(),
+            )
+            db.add(doctor)
+
     db.commit()
     db.refresh(hospital)
     return hospital
