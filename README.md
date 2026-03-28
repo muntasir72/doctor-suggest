@@ -1,4 +1,4 @@
-# Healthcare Assistant
+# MediMatch
 
 AI-powered symptom analysis and doctor recommendation app.
 
