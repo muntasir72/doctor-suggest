@@ -31,7 +31,7 @@ export default function DoctorCard({ doctor, isTopMatch, animDelay }) {
           <div className="doctor-meta">
             <span className="doctor-meta-item">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-              {doctor.hospital}
+              {doctor.hospital || "Independent Clinic"}
             </span>
             {doctor.experience_years != null && (
               <span className="doctor-meta-item">

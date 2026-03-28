@@ -48,8 +48,8 @@ export default function HospitalMap({ doctors, hospitals }) {
     ? doctors.map((d, i) => ({
         name: d.hospital || d.name,
         label: `${d.name} — ${d.specialty}`,
-        lat: d.hospital_latitude ?? null,
-        lng: d.hospital_longitude ?? null,
+        lat: d.hospital_latitude ?? d.latitude ?? null,
+        lng: d.hospital_longitude ?? d.longitude ?? null,
         city: "",
         idx: i,
       }))

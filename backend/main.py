@@ -143,6 +143,9 @@ def seed_default_data():
             Doctor(name="Dr. Thomas Green", email="thomas.green@citygeneral.com", password_hash=default_hash, specialty="orthopedist", experience_years=16, hospital_id=hospital_map["City General Hospital"], availability="Mon-Thu", contact_info="+1-555-0502"),
             Doctor(name="Dr. Rachel Foster", email="rachel.foster@digestive.com", password_hash=default_hash, specialty="gastroenterologist", experience_years=13, hospital_id=hospital_map["Digestive Health Institute"], availability="Tue-Sat", contact_info="+1-555-0601"),
             Doctor(name="Dr. Kevin Patel", email="kevin.patel@wellness.com", password_hash=default_hash, specialty="gastroenterologist", experience_years=6, hospital_id=hospital_map["Wellness Medical Center"], availability="Mon-Fri", contact_info="+1-555-0602"),
+            Doctor(name="Dr. Sophia Reed", email="sophia.reed@clinic.com", password_hash=default_hash, specialty="dermatologist", experience_years=11, hospital_id=None, availability="Mon-Fri", contact_info="+1-555-0701", address="52 Sunset Blvd, West Hollywood", city="Los Angeles", latitude=34.0901, longitude=-118.3866),
+            Doctor(name="Dr. Marcus Johnson", email="marcus.johnson@clinic.com", password_hash=default_hash, specialty="general physician", experience_years=18, hospital_id=None, availability="Mon-Sat", contact_info="+1-555-0702", address="88 Lakeshore Dr, Lincoln Park", city="Chicago", latitude=41.9215, longitude=-87.6340),
+            Doctor(name="Dr. Nina Patel", email="nina.patel@clinic.com", password_hash=default_hash, specialty="psychiatrist", experience_years=9, hospital_id=None, availability="Tue-Fri", contact_info="+1-555-0703", address="200 E 61st St, Upper East Side", city="New York", latitude=40.7636, longitude=-73.9654),
         ]
         db.add_all(doctors)
         db.commit()
@@ -258,7 +261,7 @@ def get_doctors_from_db(specialist: str, db: Session) -> list[DoctorInfo]:
     """Query database for doctors matching the specialist type."""
     specialist = specialist.lower().strip()
 
-    query = db.query(Doctor).join(Hospital)
+    query = db.query(Doctor).outerjoin(Hospital)
 
     matches = query.filter(Doctor.specialty == specialist).all()
 
@@ -274,12 +277,12 @@ def get_doctors_from_db(specialist: str, db: Session) -> list[DoctorInfo]:
         DoctorInfo(
             name=d.name,
             specialty=d.specialty,
-            hospital=d.hospital.name,
+            hospital=d.hospital.name if d.hospital else "Independent Clinic",
             phone=d.contact_info or "",
             experience_years=d.experience_years,
             availability=d.availability or "",
-            hospital_latitude=d.hospital.latitude,
-            hospital_longitude=d.hospital.longitude,
+            hospital_latitude=d.hospital.latitude if d.hospital else d.latitude,
+            hospital_longitude=d.hospital.longitude if d.hospital else d.longitude,
         )
         for d in matches
     ]
@@ -591,9 +594,10 @@ def add_doctor(data: DoctorCreate, db: Session = Depends(get_db)):
             detail=f"Invalid specialty. Must be one of: {', '.join(VALID_SPECIALTIES)}",
         )
 
-    hospital = db.query(Hospital).filter(Hospital.id == data.hospital_id).first()
-    if not hospital:
-        raise HTTPException(status_code=404, detail="Hospital not found. Register the hospital first.")
+    if data.hospital_id is not None:
+        hospital = db.query(Hospital).filter(Hospital.id == data.hospital_id).first()
+        if not hospital:
+            raise HTTPException(status_code=404, detail="Hospital not found. Register the hospital first.")
 
     p_hash = ""
     if data.password and data.email:
@@ -633,11 +637,14 @@ def list_doctors(
     city: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    query = db.query(Doctor).join(Hospital)
+    query = db.query(Doctor).outerjoin(Hospital)
     if specialty:
         query = query.filter(func.lower(Doctor.specialty) == specialty.strip().lower())
     if city:
-        query = query.filter(func.lower(Hospital.city) == city.strip().lower())
+        city_lower = city.strip().lower()
+        query = query.filter(
+            (func.lower(Hospital.city) == city_lower) | (func.lower(Doctor.city) == city_lower)
+        )
     return query.order_by(Doctor.name).all()
 
 

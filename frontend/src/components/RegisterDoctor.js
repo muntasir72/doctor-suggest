@@ -10,7 +10,6 @@ const INITIAL = {
   confirm_password: "",
   specialty: "",
   experience_years: "",
-  hospital_id: "",
   availability: "",
   contact_info: "",
   address: "",
@@ -21,7 +20,6 @@ const INITIAL = {
 
 export default function RegisterDoctor() {
   const [form, setForm] = useState(INITIAL);
-  const [hospitals, setHospitals] = useState([]);
   const [specialties, setSpecialties] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(null);
@@ -29,11 +27,6 @@ export default function RegisterDoctor() {
   const [locationError, setLocationError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/hospitals`)
-      .then((r) => r.json())
-      .then(setHospitals)
-      .catch(() => {});
-
     fetch(`${API_URL}/specialties`)
       .then((r) => r.json())
       .then(setSpecialties)
@@ -59,7 +52,6 @@ export default function RegisterDoctor() {
     form.password.length >= 6 &&
     form.password === form.confirm_password &&
     form.specialty &&
-    form.hospital_id &&
     form.experience_years;
 
   const handleSubmit = async (e) => {
@@ -76,7 +68,6 @@ export default function RegisterDoctor() {
       const payload = {
         ...formData,
         experience_years: parseInt(form.experience_years, 10) || 0,
-        hospital_id: parseInt(form.hospital_id, 10),
       };
 
       const res = await fetch(`${API_URL}/doctors/add`, {
@@ -108,7 +99,7 @@ export default function RegisterDoctor() {
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
           </div>
           <h2>Register Doctor</h2>
-          <p>Add a doctor to the MediMatch directory</p>
+          <p>Register your independent clinic on MediMatch</p>
         </div>
 
         <div className="form-body">
@@ -145,25 +136,14 @@ export default function RegisterDoctor() {
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label" htmlFor="d-specialty">Specialty <span className="required">*</span></label>
-              <select id="d-specialty" className="form-select" value={form.specialty} onChange={(e) => update("specialty", e.target.value)} disabled={loading}>
-                <option value="">Select specialty...</option>
-                {specialties.map((s) => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="d-hospital">Hospital <span className="required">*</span></label>
-              <select id="d-hospital" className="form-select" value={form.hospital_id} onChange={(e) => update("hospital_id", e.target.value)} disabled={loading}>
-                <option value="">Select hospital...</option>
-                {hospitals.map((h) => (
-                  <option key={h.id} value={h.id}>{h.name} — {h.city}</option>
-                ))}
-              </select>
-            </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="d-specialty">Specialty <span className="required">*</span></label>
+            <select id="d-specialty" className="form-select" value={form.specialty} onChange={(e) => update("specialty", e.target.value)} disabled={loading}>
+              <option value="">Select specialty...</option>
+              {specialties.map((s) => (
+                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+              ))}
+            </select>
           </div>
 
           <div className="form-row">
@@ -188,12 +168,6 @@ export default function RegisterDoctor() {
             <label className="form-label" htmlFor="d-city">City <span className="optional">(Optional)</span></label>
             <input id="d-city" className="form-input" value={form.city} onChange={(e) => update("city", e.target.value)} placeholder="Auto-filled from address, or enter manually" disabled={loading} />
           </div>
-
-          {hospitals.length === 0 && (
-            <div className="alert alert-info">
-              No hospitals registered yet. <a href="/register-hospital">Register a hospital first</a>.
-            </div>
-          )}
 
           <div className="form-actions">
             <button type="submit" className="btn btn-primary btn-lg" disabled={loading || !isValid} style={{ flex: 1 }}>

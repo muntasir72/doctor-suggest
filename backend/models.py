@@ -29,7 +29,7 @@ class Doctor(Base):
     password_hash = Column(String, default="")
     specialty = Column(String, nullable=False, index=True)
     experience_years = Column(Integer, default=0)
-    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=False)
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=True)
     availability = Column(String, default="")
     contact_info = Column(String, default="")
     address = Column(String, default="")

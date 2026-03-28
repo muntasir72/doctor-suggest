@@ -91,7 +91,7 @@ class DoctorCreate(BaseModel):
     password: Optional[str] = ""
     specialty: str
     experience_years: int
-    hospital_id: int
+    hospital_id: Optional[int] = None
     availability: Optional[str] = ""
     contact_info: Optional[str] = ""
     address: Optional[str] = ""
@@ -118,7 +118,7 @@ class DoctorResponse(BaseModel):
     email: str = ""
     specialty: str
     experience_years: int
-    hospital_id: int
+    hospital_id: Optional[int] = None
     availability: str
     contact_info: str
     address: str = ""
