@@ -1,75 +1,122 @@
 # Healthcare Assistant
 
-AI-powered symptom analysis and doctor recommendation app using OpenAI and Exa AI.
+AI-powered symptom analysis and doctor recommendation app.
 
-## Architecture
+Describe your symptoms in plain language and the app will identify the right medical specialist, find matching doctors, and provide relevant medical context — all in seconds.
+
+---
+
+## How It Works
 
 ```
-User → React Frontend → FastAPI Backend → OpenAI (extract symptoms)
-                                        → Exa AI  (medical context search)
-                                        → OpenAI (decide specialist)
-                                        → Doctor DB (filter matches)
-                                        → Response
+                          +------------------+
+                          |  React Frontend  |
+                          +--------+---------+
+                                   |
+                                   v
+                          +------------------+
+                          |  FastAPI Backend  |
+                          +--------+---------+
+                                   |
+                    +--------------+--------------+
+                    |              |              |
+                    v              v              v
+              +-----------+  +-----------+  +-----------+
+              |  OpenAI   |  |  Exa AI   |  | Doctor DB |
+              | (extract  |  | (medical  |  | (filter   |
+              | symptoms) |  |  context) |  |  matches) |
+              +-----+-----+  +-----+-----+  +-----------+
+                    |              |              ^
+                    v              v              |
+              +-----------+                      |
+              |  OpenAI   |  --------------------+
+              | (decide   |
+              | specialist|
+              +-----------+
 ```
+
+**Step-by-step:**
+
+1. User describes symptoms in the React frontend
+2. Backend sends the text to **OpenAI** to extract structured symptoms
+3. **Exa AI** searches for relevant medical context
+4. **OpenAI** determines the appropriate medical specialist
+5. **Doctor DB** filters matching doctors by specialty
+6. Results are returned to the frontend
+
+---
 
 ## Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- OpenAI API key
-- Exa AI API key
+| Requirement  | Minimum Version |
+|-------------|----------------|
+| Python      | 3.10+          |
+| Node.js     | 18+            |
+| OpenAI API key | [Get one here](https://platform.openai.com/api-keys) |
+| Exa AI API key | [Get one here](https://exa.ai) |
 
-## Setup & Run
+---
 
-### 1. Backend
+## Getting Started
+
+### Backend
 
 ```bash
 cd backend
 
-# Create virtual environment
+# 1. Create and activate a virtual environment
 python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS / Linux
 
-# Activate (Windows)
-venv\Scripts\activate
-# Activate (macOS/Linux)
-source venv/bin/activate
-
-# Install dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# Create .env file with your API keys
-copy .env.example .env   # Windows
-# cp .env.example .env   # macOS/Linux
+# 3. Configure environment variables
+copy .env.example .env         # Windows
+# cp .env.example .env         # macOS / Linux
+```
 
-# Edit .env and add your actual API keys
-# OPENAI_API_KEY=sk-...
-# EXA_API_KEY=...
+Open the `.env` file and add your API keys:
 
-# Run the server
+```
+OPENAI_API_KEY=sk-...
+EXA_API_KEY=...
+```
+
+Start the server:
+
+```bash
 python run.py
 ```
 
-The backend runs at **http://localhost:8000**.
+Backend will be running at **http://localhost:8000**
 
-### 2. Frontend
+---
+
+### Frontend
 
 ```bash
 cd frontend
 
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Start development server
+# 2. Start the development server
 npm start
 ```
 
-The frontend runs at **http://localhost:3000**.
+Frontend will be running at **http://localhost:3000**
 
-## API Usage
+---
 
-### `POST /analyze`
+## API Reference
 
-**Request:**
+### `POST /analyze` — Analyze Symptoms
+
+Send a plain-text description of symptoms and receive a specialist recommendation with matching doctors.
+
+**Request**
 
 ```json
 {
@@ -77,7 +124,7 @@ The frontend runs at **http://localhost:3000**.
 }
 ```
 
-**Response:**
+**Response**
 
 ```json
 {
@@ -98,15 +145,19 @@ The frontend runs at **http://localhost:3000**.
   ],
   "medical_context": "...relevant medical information from Exa AI...",
   "extracted_symptoms": ["severe headaches", "dizziness", "blurred vision"],
-  "disclaimer": "⚠️ This is not medical advice. Please consult a qualified doctor for proper diagnosis and treatment.",
+  "disclaimer": "This is not medical advice. Please consult a qualified doctor for proper diagnosis and treatment.",
   "emergency": false,
   "emergency_message": null
 }
 ```
 
-### Emergency Example
+---
 
-**Request:**
+### `POST /analyze` — Emergency Detection
+
+The app automatically detects life-threatening symptoms and responds with an emergency alert.
+
+**Request**
 
 ```json
 {
@@ -114,7 +165,7 @@ The frontend runs at **http://localhost:3000**.
 }
 ```
 
-**Response:**
+**Response**
 
 ```json
 {
@@ -122,22 +173,52 @@ The frontend runs at **http://localhost:3000**.
   "doctors": [],
   "medical_context": "",
   "extracted_symptoms": [],
-  "disclaimer": "⚠️ This is not medical advice. Please consult a qualified doctor for proper diagnosis and treatment.",
+  "disclaimer": "This is not medical advice. Please consult a qualified doctor for proper diagnosis and treatment.",
   "emergency": true,
-  "emergency_message": "🚨 EMERGENCY: Your symptoms suggest a potentially life-threatening condition. Please call emergency services (911) immediately or go to the nearest emergency room. Do NOT wait for a scheduled appointment."
+  "emergency_message": "EMERGENCY: Your symptoms suggest a potentially life-threatening condition. Please call emergency services (911) immediately or go to the nearest emergency room."
 }
 ```
 
-### `GET /health`
+---
 
-Returns `{"status": "ok"}` — use for health checks.
+### `GET /health` — Health Check
+
+Returns server status. Use for uptime monitoring.
+
+```json
+{ "status": "ok" }
+```
+
+---
 
 ## Tech Stack
 
-| Layer    | Technology     |
-| -------- | -------------- |
-| Frontend | React 18       |
-| Backend  | FastAPI        |
+| Layer    | Technology       |
+|----------|-----------------|
+| Frontend | React 18         |
+| Backend  | FastAPI          |
 | AI       | OpenAI gpt-4.1-mini |
-| Search   | Exa AI         |
-| Database | In-memory list |
+| Search   | Exa AI           |
+| Database | In-memory list   |
+
+---
+
+## Project Structure
+
+```
+Health_App/
+├── backend/
+│   ├── .env.example       # Environment variable template
+│   ├── requirements.txt   # Python dependencies
+│   └── run.py             # Entry point for the FastAPI server
+├── frontend/
+│   ├── package.json       # Node.js dependencies
+│   └── src/               # React application source
+└── README.md
+```
+
+---
+
+## Disclaimer
+
+> This application is for **informational purposes only** and does **not** provide medical advice. Always consult a qualified healthcare professional for diagnosis and treatment.
