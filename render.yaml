@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: medimatch-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python run.py
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: EXA_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11.6"
