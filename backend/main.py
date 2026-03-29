@@ -38,7 +38,19 @@ openai_client = AsyncOpenAI(
     api_key=os.getenv("GROQ_API_KEY"),
     base_url="https://api.groq.com/openai/v1",
 )
-exa_client = Exa(api_key=os.getenv("EXA_API_KEY"))
+
+_exa_instance: Optional[Exa] = None
+
+
+def _get_exa_client() -> Optional[Exa]:
+    global _exa_instance
+    if _exa_instance is not None:
+        return _exa_instance
+    key = os.getenv("EXA_API_KEY")
+    if not key:
+        return None
+    _exa_instance = Exa(api_key=key)
+    return _exa_instance
 
 
 # ── Auth Utilities ──
@@ -218,9 +230,12 @@ async def extract_symptoms(user_input: str) -> list[str]:
 
 
 async def get_medical_context(symptoms: list[str]) -> str:
+    client = _get_exa_client()
+    if client is None:
+        return "Medical context unavailable: EXA_API_KEY is not configured."
     query = f"{', '.join(symptoms)} causes and which doctor to consult"
     try:
-        results = exa_client.search_and_contents(
+        results = client.search_and_contents(
             query=query, num_results=3, type="auto", text=True,
         )
         combined = ""
